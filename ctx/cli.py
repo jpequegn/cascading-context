@@ -2,6 +2,7 @@ import argparse
 
 from ctx.db import get_connection
 from ctx.facts import FactStore, NumpyRandomEmbedder
+from ctx.retriever import FactRetriever
 from ctx.session import SessionManager
 
 
@@ -29,6 +30,19 @@ def cmd_facts_list(args: argparse.Namespace) -> None:
         print(f"  {f.id}  [{f.category}] {conf}  {f.claim}  {entities}")
 
 
+def cmd_retrieve(args: argparse.Namespace) -> None:
+    conn = get_connection()
+    embedder = NumpyRandomEmbedder()
+    store = FactStore(conn, embedder)
+    retriever = FactRetriever(store, embedder, min_confidence=args.min_confidence)
+    results = retriever.retrieve(args.query, top_k=args.top_k)
+    if not results:
+        print("No matching facts found.")
+        return
+    for r in results:
+        print(f"  {r.score:.4f}  ({r.fact.confidence:.0%})  [{r.fact.category}]  {r.fact.claim}")
+
+
 def cmd_sessions_create(args: argparse.Namespace) -> None:
     conn = get_connection()
     mgr = SessionManager(conn)
@@ -54,6 +68,13 @@ def main():
     sp_create.add_argument("domain", help="Session domain (e.g. 'coding', 'research')")
     sp_create.add_argument("--title", help="Optional session title")
 
+    # retrieve
+    sp_retrieve = subparsers.add_parser("retrieve", help="Retrieve relevant facts")
+    sp_retrieve.add_argument("query", help="Query to match against stored facts")
+    sp_retrieve.add_argument("--top-k", type=int, default=5, dest="top_k", help="Number of results")
+    sp_retrieve.add_argument("--min-confidence", type=float, default=0.0, dest="min_confidence",
+                             help="Minimum confidence threshold")
+
     # facts
     sp_facts = subparsers.add_parser("facts", help="Manage facts")
     facts_sub = sp_facts.add_subparsers(dest="facts_command")
@@ -61,7 +82,9 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "facts":
+    if args.command == "retrieve":
+        cmd_retrieve(args)
+    elif args.command == "facts":
         if args.facts_command == "list":
             cmd_facts_list(args)
         else:
