@@ -35,7 +35,8 @@ def cmd_retrieve(args: argparse.Namespace) -> None:
     conn = get_connection()
     embedder = NumpyRandomEmbedder()
     store = FactStore(conn, embedder)
-    retriever = FactRetriever(store, embedder, min_confidence=args.min_confidence)
+    retriever = FactRetriever(store, embedder, min_confidence=args.min_confidence,
+                              decay_lambda=args.decay)
     results = retriever.retrieve(args.query, top_k=args.top_k)
     if not results:
         print("No matching facts found.")
@@ -97,6 +98,8 @@ def main():
     sp_retrieve.add_argument("--top-k", type=int, default=5, dest="top_k", help="Number of results")
     sp_retrieve.add_argument("--min-confidence", type=float, default=0.0, dest="min_confidence",
                              help="Minimum confidence threshold")
+    sp_retrieve.add_argument("--decay", type=float, default=0.0,
+                             help="Temporal decay lambda (default: 0, no decay)")
 
     # facts
     sp_facts = subparsers.add_parser("facts", help="Manage facts")
