@@ -1,0 +1,21 @@
+[project]
+name = "cascading-context"
+version = "0.1.0"
+description = "Cascading context for AI agents"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic",
+    "duckdb",
+    "numpy",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ctx"]
+
+[project.scripts]
+ctx = "ctx.cli:main"
