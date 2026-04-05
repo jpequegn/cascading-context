@@ -4,6 +4,7 @@ from ctx.db import get_connection
 from ctx.facts import FactStore, NumpyRandomEmbedder
 from ctx.retriever import FactRetriever
 from ctx.session import SessionManager
+from ctx.summarizer import Summarizer
 
 
 def cmd_sessions_list(args: argparse.Namespace) -> None:
@@ -43,6 +44,24 @@ def cmd_retrieve(args: argparse.Namespace) -> None:
         print(f"  {r.score:.4f}  ({r.fact.confidence:.0%})  [{r.fact.category}]  {r.fact.claim}")
 
 
+def cmd_summarize(args: argparse.Namespace) -> None:
+    conn = get_connection()
+    mgr = SessionManager(conn)
+    embedder = NumpyRandomEmbedder()
+    store = FactStore(conn, embedder)
+    summarizer = Summarizer(store)
+
+    messages = mgr.get_messages(args.session_id)
+    if not messages:
+        print(f"No messages found for session {args.session_id}")
+        return
+
+    facts = summarizer.extract_facts(args.session_id, messages)
+    print(f"Extracted {len(facts)} facts from session {args.session_id}:")
+    for f in facts:
+        print(f"  ({f.confidence:.0%}) [{f.category}] {f.claim}")
+
+
 def cmd_sessions_create(args: argparse.Namespace) -> None:
     conn = get_connection()
     mgr = SessionManager(conn)
@@ -68,6 +87,10 @@ def main():
     sp_create.add_argument("domain", help="Session domain (e.g. 'coding', 'research')")
     sp_create.add_argument("--title", help="Optional session title")
 
+    # summarize
+    sp_summarize = subparsers.add_parser("summarize", help="Extract facts from a session")
+    sp_summarize.add_argument("session_id", help="Session ID to summarize")
+
     # retrieve
     sp_retrieve = subparsers.add_parser("retrieve", help="Retrieve relevant facts")
     sp_retrieve.add_argument("query", help="Query to match against stored facts")
@@ -82,7 +105,9 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "retrieve":
+    if args.command == "summarize":
+        cmd_summarize(args)
+    elif args.command == "retrieve":
         cmd_retrieve(args)
     elif args.command == "facts":
         if args.facts_command == "list":
