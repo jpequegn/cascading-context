@@ -32,3 +32,18 @@ def _init_schema(conn: duckdb.DuckDBPyConnection) -> None:
             created_at TIMESTAMP DEFAULT current_timestamp
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS facts (
+            id INTEGER PRIMARY KEY,
+            session_id VARCHAR,
+            claim TEXT,
+            category VARCHAR,
+            confidence FLOAT,
+            entities VARCHAR[],
+            embedding FLOAT[],
+            created_at TIMESTAMP DEFAULT current_timestamp
+        )
+    """)
+    conn.execute("""
+        CREATE SEQUENCE IF NOT EXISTS facts_id_seq START 1
+    """)

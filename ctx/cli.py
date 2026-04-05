@@ -1,6 +1,7 @@
 import argparse
 
 from ctx.db import get_connection
+from ctx.facts import FactStore, NumpyRandomEmbedder
 from ctx.session import SessionManager
 
 
@@ -13,6 +14,19 @@ def cmd_sessions_list(args: argparse.Namespace) -> None:
         return
     for s in sessions:
         print(f"{s.id}  {s.created_at:%Y-%m-%d %H:%M}  [{s.domain}]  {s.title}")
+
+
+def cmd_facts_list(args: argparse.Namespace) -> None:
+    conn = get_connection()
+    store = FactStore(conn, NumpyRandomEmbedder())
+    facts = store.get_all()
+    if not facts:
+        print("No facts yet.")
+        return
+    for f in facts:
+        conf = f"({f.confidence:.0%})"
+        entities = ", ".join(f.entities) if f.entities else ""
+        print(f"  {f.id}  [{f.category}] {conf}  {f.claim}  {entities}")
 
 
 def cmd_sessions_create(args: argparse.Namespace) -> None:
@@ -40,9 +54,19 @@ def main():
     sp_create.add_argument("domain", help="Session domain (e.g. 'coding', 'research')")
     sp_create.add_argument("--title", help="Optional session title")
 
+    # facts
+    sp_facts = subparsers.add_parser("facts", help="Manage facts")
+    facts_sub = sp_facts.add_subparsers(dest="facts_command")
+    facts_sub.add_parser("list", help="List all stored facts")
+
     args = parser.parse_args()
 
-    if args.command == "sessions":
+    if args.command == "facts":
+        if args.facts_command == "list":
+            cmd_facts_list(args)
+        else:
+            sp_facts.print_help()
+    elif args.command == "sessions":
         if args.sessions_command == "list":
             cmd_sessions_list(args)
         elif args.sessions_command == "create":
